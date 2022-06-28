@@ -87,174 +87,96 @@ public class ExcelDownload {
 		
 	}
 	
-	public void generateDataToCell(XSSFRow row, XSSFSheet sheet, XSSFCell cell,
-		CellStyle bodyStyle, List<Object> objList) {
+	/**
+	 * 엑셀헤더 생성
+	 * 
+	 * @param headerList
+	 * @param row
+	 * @param sheet
+	 * @param cell
+	 * @param bodyCellStyle
+	 * @param colWidths
+	 */
+	public void createExcelHeader(
+			List<String[]> headerList, XSSFRow row, XSSFSheet sheet , XSSFCell cell , CellStyle bodyCellStyle, int[] colWidths ) {
 
-			int rowCnt = 3;			
+		int rowCnt = 0;
+    	for(String[] header :headerList) {
+    		row = sheet.createRow(rowCnt++);
+    		for (int i = 0; i < header.length; i++) {
+    			cell = row.createCell(i);
+    			cell.setCellStyle(bodyCellStyle); // headerStyle
+    			cell.setCellValue(header[i]);
+    			sheet.setColumnWidth(i, colWidths[i]);	//column width 지정
+    		}
+    	}
+	}
+	
+	/**
+	 * 엑셀데이터 생성
+	 * 
+	 * @param row
+	 * @param sheet
+	 * @param cell
+	 * @param bodyStyle
+	 * @param objList
+	 * @param dataRowOffset
+	 */
+	public void generateDataToCell(XSSFRow row, XSSFSheet sheet, XSSFCell cell,
+			CellStyle bodyStyle, List<Object> objList, int dataRowOffset) {
+		try {
+			int rowCnt = dataRowOffset; // 3;			
 			for(Object obj :objList) {
 				Method[] methods = obj.getClass().getDeclaredMethods();
-				
-
 				row = sheet.createRow(rowCnt++);
-				int cellCnt = 0; 
-				
-				
-				
-				
-				Field[] fields = obj.getClass().getDeclaredFields();
-				
-				for(Field field : fields) {
-					System.out.println("Field Name : " + field.getName());
-					if(!"serialVersionUID".equals(field.getName())) {
-						System.out.println("Field : " +field.getAnnotation(CellOrderAnnotation2.class).order());
-						field.setAccessible(true);
-						
-					}
-				}
 				
 				for(Method method :methods) {
-					try {
 						if(method.getName().substring(0, 3).equals("get") && !"getClass".equals(method.getName())) {
-							
-							
-//							System.out.println("method.getName() --->"+method.getName());
-							//method = obj.getClass().getDeclaredMethod(method.getName());
 							int cellOrder = method.getDeclaredAnnotation(CellOrderAnnotation.class).order();
 							method.setAccessible(true);
 							Object rtnObject = method.invoke(obj);
 			        		cell = row.createCell(cellOrder);							
-//			        		cell = row.createCell(cellCnt++);							
 							cell.setCellStyle(bodyStyle); // bodyStyle					
 							cell.setCellValue(rtnObject.toString());
-							
 						}
-						
-						
-//					} catch (NoSuchMethodException | SecurityException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-					} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
 				}
-				
-//				Method[] methodArray = obj.getClass().getDeclaredMethods();
-				
-//				System.out.println("methodArray ---->" + methodArray[idx].getName());
-				
-//				idx++;
-				
-//				int cellCnt = 0;
-//				int rowCnt = 0;
-//				for(int i=0;i<methodArray.length;i++) {
-//					cellCnt = 0;
-//					row = sheet.createRow(rowCnt++);
-//					cell.setCellStyle(bodyStyle); // bodyStyle
-//					System.out.println("methodArray[i].getName() ---->" + methodArray[i].getName());
-//					cell.setCellValue(methodArray[i].);
-//				}
 			}
-//		} catch (NoSuchMethodException | SecurityException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-			
-			
-//			//데이터 부분 생성
-//			for(ExcelVO vo : familyList) {
-//				// 넘버링
-//				cell = row.createCell(cellCnt++);
-//				cell.setCellValue(listCount--);
-//				// 성명
-//				cell = row.createCell(cellCnt++);
-//				cell.setCellStyle(bodyStyle);
-//				cell.setCellValue(vo.getName());
-//				// 나이
-//				cell = row.createCell(cellCnt++);
-//				cell.setCellStyle(bodyStyle);
-//				cell.setCellValue(vo.getAge());
-//				
-//				// 주소
-//				cell = row.createCell(cellCnt++);
-//				cell.setCellStyle(bodyStyle);
-//				cell.setCellValue(vo.getAddress());
-//			}
-			
-//		});
-		
-		
-		
+		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void mergeExcel(XSSFSheet sheet) {
+    	/** 엑셀헤더 Merge */
+    	sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 3));
+    	sheet.addMergedRegion(new CellRangeAddress(1, 2, 0,0));
+    	sheet.addMergedRegion(new CellRangeAddress(1, 1, 1, 3));
 	}
 
-    public String excelDownload(HttpServletResponse res) {
+	public String excelDownload(HttpServletResponse res) {
+		/** 1. 엑셀 출력 데이터   */ List<Object> dataList = getFamilyList();
+		/** 2. 엑셀 헤더 그리기 */ List<String[]> headerList = getHeaderList(); 
+		/** 3. 엑셀 헤더 사이즈 */ int[] cellWidths = getColWidths();
+		/** 4. 엑셀데이터 시작 Row number*/ 	int dataRowOffset = 3;
+		/** 5. 엑셀 시트명 설정 */ String sheetName = "사용자현황";
+		/** 6. 엑셀 파일명 설정 */ String fileName = "꼬꼬여사.xlsx";
+		return generateExcel(res, dataList, headerList, cellWidths, dataRowOffset, sheetName, fileName);
+	}
+	
+    public String generateExcel(HttpServletResponse res, List<Object> dataList, List<String[]> headerList,
+    		int[] cellWidths, int dataRowOffset,String sheetName, String fileName) {
         try {
-
-        	/** 1. 엑셀 출력 데이터   */
-        	List<Object> familyList = getFamilyList(); 
-        	
-        	/** 2. 엑셀 헤더 그리기 */
-        	List<String[]> headerList = getHeaderList(); 
-        	
-        	/** 3. 엑셀 헤더 사이즈 */
-        	int[] colWidths = getColWidths();
-        	
         	XSSFWorkbook workbook = new XSSFWorkbook();
         	XSSFSheet sheet = null;
         	XSSFCell cell = null;
         	XSSFRow row = null;
         	CellStyle[] cellStyleArray = eUtil.excelCellStyle(workbook);
-        	//rows
-        	int rowCnt = 0;
-        	int cellCnt = 0;
-        	int listCount = familyList.size();
         	
-        	// 엑셀 시트명 설정
-        	sheet = workbook.createSheet("사용자현황");
-        	
-        	//헤더 정보 구성
-        	for(String[] header :headerList) {
-        		row = sheet.createRow(rowCnt++);
-        		for (int i = 0; i < header.length; i++) {
-        			cell = row.createCell(i);
-        			cell.setCellStyle(cellStyleArray[0]); // headerStyle
-        			cell.setCellValue(header[i]);
-        			sheet.setColumnWidth(i, colWidths[i]);	//column width 지정
-        		}
-        	}
-        	
-        	sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 3));
-        	sheet.addMergedRegion(new CellRangeAddress(1, 2, 0,0));
-        	sheet.addMergedRegion(new CellRangeAddress(1, 1, 1, 3));
-        	
-        	//데이터 부분 생성
-//        	//데이터 부분 생성
-//        	for(ExcelVO vo : familyList) {
-//        		cellCnt = 0;
-//        		row = sheet.createRow(rowCnt++);
-//        		// 넘버링
-//        		cell = row.createCell(cellCnt++);
-//        		cell.setCellStyle(cellStyleArray[1]); // bodyStyle
-//        		cell.setCellValue(listCount--);
-//        		// 성명
-//        		cell = row.createCell(cellCnt++);
-//        		cell.setCellStyle(cellStyleArray[1]);
-//        		cell.setCellValue(vo.getName());
-//        		// 나이
-//        		cell = row.createCell(cellCnt++);
-//        		cell.setCellStyle(cellStyleArray[1]);
-//        		cell.setCellValue(vo.getAge());
-//        		
-//        		// 주소
-//        		cell = row.createCell(cellCnt++);
-//        		cell.setCellStyle(cellStyleArray[1]);
-//        		cell.setCellValue(vo.getAddress());
-//        	}
-        	
-        	generateDataToCell(row, sheet, cell, cellStyleArray[1], (List<Object>)familyList); 
-        	
-        	// 엑셀 파일명 설정
-        	String fileName = "꼬꼬여사.xlsx";
+        	/** 엑셀 시트명 설정 */ sheet = workbook.createSheet(sheetName);
+        	/** 엑셀헤더 생성 */ createExcelHeader(headerList, row, sheet, cell, cellStyleArray[0], cellWidths );
+        	/** 엑셀헤더 Merge */ mergeExcel(sheet);
+        	/** 엑셀데이터  생성 */ generateDataToCell(row, sheet, cell, cellStyleArray[1], (List<Object>)dataList, dataRowOffset); 
+
         	res.setContentType("application/vnd.ms-excel");
         	String outputFileName = new String(fileName.getBytes("KSC5601"), "8859_1");
         	res.setHeader("Set-Cookie", "fileDownload=true; path=/");
@@ -265,10 +187,39 @@ public class ExcelDownload {
         	res.getOutputStream().close();
         	
         } catch(IOException ex) {
-        	
+        	ex.printStackTrace();
         }
 
         return "다운로드 완료";
     }
 
 }
+
+////rows
+//int rowCnt = 0;
+//// 엑셀 헤더 생성
+//for(String[] header :headerList) {
+//	row = sheet.createRow(rowCnt++);
+//	for (int i = 0; i < header.length; i++) {
+//		cell = row.createCell(i);
+//		cell.setCellStyle(cellStyleArray[0]); // headerStyle
+//		cell.setCellValue(header[i]);
+//		sheet.setColumnWidth(i, colWidths[i]);	//column width 지정
+//	}
+//}
+//
+//sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 3));
+//sheet.addMergedRegion(new CellRangeAddress(1, 2, 0,0));
+//sheet.addMergedRegion(new CellRangeAddress(1, 1, 1, 3));
+
+//Field[] fields = obj.getClass().getDeclaredFields();
+//
+//for(Field field : fields) {
+//	System.out.println("Field Name : " + field.getName());
+//	if(!"serialVersionUID".equals(field.getName())) {
+//		System.out.println("Field : " +field.getAnnotation(CellOrderAnnotation2.class).order());
+//		field.setAccessible(true);
+//	}
+//}
+
+

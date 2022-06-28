@@ -17,13 +17,13 @@ public class ExcelVO implements Serializable{
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	@CellOrderAnnotation2(order = 0)
+//	@CellOrderAnnotation2(order = 0)
 	private String no;
-	@CellOrderAnnotation2(order = 1)
+//	@CellOrderAnnotation2(order = 1)
 	private String name;
-	@CellOrderAnnotation2(order = 2)
+//	@CellOrderAnnotation2(order = 2)
     private String age;
-	@CellOrderAnnotation2(order = 3)
+//	@CellOrderAnnotation2(order = 3)
     private String address;
 	
     @CellOrderAnnotation(order = 0)
