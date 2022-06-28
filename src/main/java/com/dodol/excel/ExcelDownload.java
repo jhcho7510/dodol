@@ -51,7 +51,7 @@ public class ExcelDownload {
     			.no("2010-K")
     			.name("조가연")
     			.age("13")
-    			.address("아시아 - 서수원로577번길 263")
+    			.address("한국 - 서수원로577번길 263")
     			.build();
     	familyList.add(headerVo);
     	
