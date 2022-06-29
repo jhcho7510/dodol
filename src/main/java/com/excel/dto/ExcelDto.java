@@ -1,4 +1,4 @@
-package com.dodol.excel.dto;
+package com.excel.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

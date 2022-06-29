@@ -1,4 +1,4 @@
-package com.dodol.convertor;
+package com.convertor;
 
 import java.sql.Array;
 import java.util.ArrayList;
