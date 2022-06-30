@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.servlet.http.HttpServletResponse;
@@ -17,6 +18,9 @@ import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import io.netty.util.internal.StringUtil;
 
 
 @Service
@@ -147,25 +151,78 @@ public class ExcelDownload {
 		}
 	}
 	
-	public void mergeExcel(XSSFSheet sheet) {
-    	/** 엑셀헤더 Merge */
-    	sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 3));
-    	sheet.addMergedRegion(new CellRangeAddress(1, 2, 0,0));
-    	sheet.addMergedRegion(new CellRangeAddress(1, 1, 1, 3));
+	/** 엑셀헤더 Merge */
+	public void mergeExcel(XSSFSheet sheet, String mergeConfig) {
+
+		if(!StringUtil.isNullOrEmpty(mergeConfig)) {
+			String[] mergeRowArray = StringUtils.split(mergeConfig, "|");
+			
+			for(String rowMergeConfig :mergeRowArray) {
+				if(rowMergeConfig.contains("*")) {
+					String[] mergeCellArray = StringUtils.split(mergeConfig, "*");
+					for(String mergeCell :mergeCellArray) {
+						String[] mergeCellPointArray = StringUtils.split(mergeConfig, ",");
+						sheet.addMergedRegion(new CellRangeAddress(
+								Integer.parseInt(mergeCellPointArray[0]), 
+								Integer.parseInt(mergeCellPointArray[1]), 
+								Integer.parseInt(mergeCellPointArray[2]), 
+								Integer.parseInt(mergeCellPointArray[3]) 
+								));
+					}
+				}
+				else {
+					//-----
+					System.out.println("--------------------------------------------------------");
+					
+					
+					String[] mergeCellPointArray = StringUtils.split(mergeConfig, ",");
+					sheet.addMergedRegion(new CellRangeAddress(
+							Integer.parseInt(mergeCellPointArray[0]), 
+							Integer.parseInt(mergeCellPointArray[1]), 
+							Integer.parseInt(mergeCellPointArray[2]), 
+							Integer.parseInt(mergeCellPointArray[3]) 
+							));
+				}
+				
+			}
+			
+			
+			
+			
+			
+			
+//			sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 3));
+//			sheet.addMergedRegion(new CellRangeAddress(1, 2, 0,0));
+//			sheet.addMergedRegion(new CellRangeAddress(1, 1, 1, 3));
+			
+		}
+    	
+    	
+    	
+    	
+    	
+    	
+    	
 	}
 
 	public String excelDownload(HttpServletResponse res) {
 		/** 1. 엑셀 출력 데이터   */ List<Object> dataList = getFamilyList();
 		/** 2. 엑셀 헤더 그리기 */ List<String[]> headerList = getHeaderList(); 
+		/** 3. 엑셀 헤더 머지 설정*/ String mergeConfig = "0,0,0,3|1,2,0,0|1,1,1,3";
 		/** 3. 엑셀 헤더 사이즈 */ int[] cellWidths = getColWidths();
 		/** 4. 엑셀데이터 시작 Row number*/ 	int dataRowOffset = 3;
 		/** 5. 엑셀 시트명 설정 */ String sheetName = "사용자현황";
 		/** 6. 엑셀 파일명 설정 */ String fileName = "꼬꼬여사.xlsx";
-		return generateExcel(res, dataList, headerList, cellWidths, dataRowOffset, sheetName, fileName);
+		return generateExcel(res, dataList, headerList, mergeConfig, cellWidths, dataRowOffset, sheetName, fileName);
 	}
 	
-    public String generateExcel(HttpServletResponse res, List<Object> dataList, List<String[]> headerList,
-    		int[] cellWidths, int dataRowOffset,String sheetName, String fileName) {
+    public String generateExcel(HttpServletResponse res, 
+    		List<Object> dataList, 
+    		List<String[]> headerList,
+    		String mergeConfig,
+    		int[] cellWidths, 
+    		int dataRowOffset, 
+    		String sheetName, String fileName) {
         try {
         	XSSFWorkbook workbook = new XSSFWorkbook();
         	XSSFSheet sheet = null;
@@ -175,7 +232,7 @@ public class ExcelDownload {
         	
         	/** 엑셀 시트명 설정 */ sheet = workbook.createSheet(sheetName);
         	/** 엑셀헤더 생성 */ createExcelHeader(headerList, row, sheet, cell, cellStyleArray[0], cellWidths );
-        	/** 엑셀헤더 Merge */ mergeExcel(sheet);
+        	/** 엑셀헤더 Merge */ mergeExcel(sheet, mergeConfig);
         	/** 엑셀데이터  생성 */ generateDataToCell(row, sheet, cell, cellStyleArray[1], (List<Object>)dataList, dataRowOffset); 
 
         	res.setContentType("application/vnd.ms-excel");
